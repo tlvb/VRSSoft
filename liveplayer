@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# First camera
+herbstclient use_index 1
+sleep 1
+mplayer -tv driver=v4l2:input=1:device=/dev/video0:norm=PAL-BG:contrast=10:saturation=-35:brightness=-50 -vf pp=fd/tn -vo gl -fs tv:// &
+sleep 1
+
+# Second camera
+herbstclient use_index 2
+sleep 1
+mplayer -tv driver=v4l2:input=1:device=/dev/video1:norm=PAL-BG:contrast=10:saturation=-35:brightness=-50 -vf pp=fd/tn -vo gl -fs tv:// &
+sleep 1
+
+# Prerecorded sequence
+herbstclient use_index 3
+sleep 1
+mplayer /home/leo/gagnam.m4v -vo gl -fs &
+
+
+## Loop display
+#while $(true); do
+#	for i in $(seq 3); do
+#		sleep 3
+#		herbstclient use_index $i
+#	done
+#done
+

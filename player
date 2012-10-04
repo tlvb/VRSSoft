@@ -1,0 +1,67 @@
+#!/usr/bin/env python
+
+import os
+from time import sleep
+
+PIDS = []
+ENV = os.environ
+ENV['DISPLAY'] = ':0.0'
+
+
+
+def switch_workspace(ws):
+	pid = os.fork()
+	if pid == 0:
+		os.execve('/usr/bin/herbstclient', ['herbstclient', 'use_index', str(ws)], ENV)
+	else:
+		PIDS.append(pid)
+
+def start_liveplayer(device):
+	pid = os.fork()
+	if pid == 0:
+		os.execve('/usr/bin/mplayer', ['mplayer', '-tv', 'driver=v4l2:input=1:device=/dev/video{}:norm=PAL-BG:contrast=10:saturation=-35:brightness=-50'.format(device), '-vf', 'pp=fd/tn', '-vo', 'gl', '-fs', 'tv://'], ENV)
+	else:
+		PIDS.append(pid)
+
+def start_recordplayer(filename):
+	pid = os.fork()
+	if pid == 0:
+		os.execve('/usr/bin/mplayer', ['mplayer', filename, '-vo', 'gl', '-fs'], ENV)
+	else:
+		PIDS.append(pid)
+	
+
+
+def prepare():
+	sleep(1)
+	switch_workspace(1)
+	sleep(1)
+	start_liveplayer(0)
+	sleep(1)
+	switch_workspace(2)
+	sleep(1)
+	start_liveplayer(1)
+	sleep(1)
+	switch_workspace(3)
+	sleep(1)
+	start_recordplayer('/home/leo/gagnam.m4v')
+
+def die():
+	for pid in PIDS:
+		os.waitpid(pid, 0)
+
+
+print("<<< STARTED >>>")
+prepare()
+print("<<< PAUSED >>>")
+print("<<< PRESS ENTER >>>")
+
+
+
+
+
+
+
+die()
+print("<<< FINISHED >>>")
+
