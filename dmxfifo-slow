@@ -1,0 +1,49 @@
+#!/usr/bin/env python2
+import os, sys, serial, signal
+
+while True:
+	try:
+		if (len(sys.argv) != 3):
+			print "wrong argc"
+			print "dmxfifo device inputfilename"
+			sys.exit(1)
+
+		device = sys.argv[1]
+		source = sys.argv[2]
+		wedestroy = False
+
+		o = serial.Serial(device, 250000, rtscts=True)
+		o.write('\xaa'*255) #init sequence
+		o.write('\x55')
+		
+		if not os.path.lexists(source):
+			os.mkfifo(source)
+
+		i = open(source, 'r')
+		j = open(source, 'w')
+
+		while True:
+			for cmd in i.readline().split():
+				print "cmd: %s"%cmd
+				chan, val = cmd.split(':', 2)
+				print "%s->%s"%(chan, val)
+				o.write(chr(int(chan, 16)) + chr(int(val, 16)))
+	except KeyboardInterrupt as ke:
+		if not i.closed:
+			i.close()
+		if not j.closed:
+			j.close()
+		if not o.closed:
+			o.flush()
+			o.close()
+		print "bye"
+		sys.exit(0)
+	except Exception as e:
+		if not i.closed:
+			i.close()
+		if not j.closed:
+			j.close()
+		if not o.closed:
+			o.close()
+
+
