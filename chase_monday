@@ -1,0 +1,84 @@
+#!/usr/bin/env python
+
+import time, sys, os
+
+#def mkchangeset(newset, oldset):
+#	changeset = {}
+#	for k in oldset.keys():
+#		if oldset[k] != newset[k]:
+#			changeset[k] = newset[k]
+#	return changeset
+
+def setoutput(device, channel, value, fader):
+	device.write('{0:x}:{1:x}\n'.format(channel, int(value*fader)))
+
+def seedlamps(device, lampset, value, fader):
+	for lamp in lampset:
+		setoutput(device, lamp, value, fader)
+
+def chasestep(device, newlamp, wagon, values, fader):
+	wagon = [newlamp] + wagon[:-1]
+	for i in range(len(wagon)):
+		setoutput(device, wagon[i], values[i], fader)
+	device.flush()
+	print("wagon: ", wagon)
+	return wagon
+
+def flashstep(device, channel, val, fader):
+	setoutput(device, channel, min(val, 255), fader)
+	print("flash: ", min(val, 255))
+	if val > 31:
+		val -= 32 
+	else:
+		val = 0
+	return val
+
+devicefile = '/tmp/dmxctl'
+if not os.path.exists(devicefile):
+	sys.stderr.write("device '{}' does not exist.\n".format(devicefile))
+	sys.exit()
+
+
+
+
+#          @
+#          |
+#        @ | @
+#      @ | | | @
+#    @-+-+-+-+-+-@-+-+-+-+-+-@
+#                  @ | | | @
+#                    @ | @
+#                      |
+#                      @
+
+
+device = open(devicefile, 'w')
+dummy = open(devicefile, 'r')
+print('device opened')
+
+chaselampset = [i for i in range(24)]
+wagon = chaselampset[1:14]
+chasevalues = [0, 1, 2, 4, 2, 1, 0, -1, -2, -4, -2, -1, 0]
+chasevalues = [v*2 + 8 for v in chasevalues]
+chasefader = 1.0
+
+flashlamp = 32
+flashvalue = 383
+flashfile = '/tmp/flash'
+flashfader = 1.0
+
+seedlamps(device, range(64), 0x0, 0)
+seedlamps(device, chaselampset, 0x8, chasefader)
+
+while True:
+	for lamp in chaselampset:
+		wagon = chasestep(device, lamp, wagon, chasevalues, chasefader)
+		time.sleep(1.0/16.0)
+		if os.path.exists(flashfile):
+			if flashvalue == 0:
+				flashvalue = 383
+			flashvalue = flashstep(device, flashlamp, flashvalue, flashfader)
+			if flashvalue == 0:
+				os.unlink(flashfile)
+
+
